@@ -1,0 +1,81 @@
+@import url('http://fonts.cdnfonts.com/css/public-sans');
+
+*{
+    margin:0;
+    padding: 0;
+
+    font-family: 'Public Sans', sans-serif;
+}
+
+body{
+
+}
+
+
+#main-layout{
+    display: flex;
+    flex-direction: column;
+}
+
+#presentation{
+    position: relative;
+    height: 100vh;
+
+    padding: 35px;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+
+@keyframes presentation-background-pan {
+    from{
+        background-position: 0% center;
+    }
+
+    to{
+        background-position: -200% center;
+    }
+}
+#presentation-background{
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    z-index: -99;
+
+    height: 100vh;
+    display: grid;
+    grid-template-columns: repeat(var(--columns), 1fr);
+    grid-template-rows: repeat(var(--rows), 1fr);
+
+    /*
+        Moving gradient
+    */
+    --g1: rgb(0, 20, 81);
+    --g2: rgb(16, 29, 180);
+    animation: presentation-background-pan 5s infinite;
+    animation-timing-function: linear;
+    background: linear-gradient(
+        to right,
+        var(--g1),
+        var(--g2),
+        var(--g1)
+    );
+    background-size: 200%;
+}
+
+#presentation-background .tile{
+    position: relative;
+}
+
+#presentation-background .tile:before{
+    background-color: rgb(0, 0, 0);
+    position: absolute;
+    inset: .5px;
+    content: "";
+    opacity: 10%;
+}

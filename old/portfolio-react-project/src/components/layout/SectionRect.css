@@ -1,0 +1,30 @@
+#rect-wrapper{
+    width: 250px;
+    height: 350px;
+    margin-bottom: 10px;
+
+    cursor: pointer;
+
+    border: solid black 8px;
+    color: white;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+
+    font-weight: 700;
+    font-family: 'Oswald', sans-serif;
+
+    padding-left: 10px;
+}
+
+#logo-container{
+    display:flex;
+    flex-direction: row;
+
+    justify-content: flex-end;
+}
+
+#logo{
+    max-width: 120px;
+}
