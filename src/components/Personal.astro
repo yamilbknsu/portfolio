@@ -1,0 +1,32 @@
+---
+import { personal } from '../data/misc';
+import SectionHead from './SectionHead.astro';
+import Icon from './Icon.astro';
+---
+
+<section class="block" id="personal">
+  <div class="wrap">
+    <SectionHead num="09" kicker="side projects" title="Personal projects" />
+    <div class="grid">
+      {personal.map((p) => (
+        <article class="card">
+          <div class="meta"><span class="hx" style="--c:var(--org-personal)"></span><span class="lab">{p.years}</span></div>
+          <h3>{p.title}</h3>
+          <p>{p.description}</p>
+          <div class="tags">{p.tech.map((t) => <span class="tag">{t}</span>)}</div>
+          <div class="clinks">{p.links.map((l) => <a href={l.url}>{l.label}<Icon name="arrow" size={11} /></a>)}</div>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .meta { display: flex; align-items: center; gap: 8px; }
+  h3 { font-size: 20px; font-weight: 700; letter-spacing: -.02em; margin: 10px 0 8px; }
+  p { margin: 0 0 14px; color: var(--ink-2); font-size: 14.5px; }
+  .clinks { margin-top: 14px; }
+  .clinks a { display: inline-flex; align-items: center; gap: 3px; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+</style>

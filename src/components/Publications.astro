@@ -1,0 +1,89 @@
+---
+import { publications, SELF } from '../data/publications';
+import type { PubKind } from '../data/types';
+import { profile } from '../data/profile';
+import SectionHead from './SectionHead.astro';
+import Icon from './Icon.astro';
+
+const kinds: [PubKind, string][] = [
+  ['journal', 'Journal'],
+  ['conference', 'Conference'],
+  ['preprint', 'Preprint'],
+  ['thesis', 'Thesis'],
+  ['software', 'Software'],
+];
+const count = (k: PubKind) => publications.filter((p) => p.kind === k).length;
+const sorted = [...publications].sort((a, b) => b.year - a.year);
+---
+
+<section class="block" id="publications">
+  <div class="wrap">
+    <SectionHead num="03" kicker="publications" title="Publications & software records">
+      <a class="u" href={profile.links.scholar}>Google Scholar · {profile.scholarStats}</a>
+    </SectionHead>
+
+    <div class="chips" role="group" aria-label="Filter publications by type">
+      <button class="chip" aria-pressed="true" data-kind="all">All<span class="n">{publications.length}</span></button>
+      {kinds.filter(([k]) => count(k) > 0).map(([k, label]) => (
+        <button class="chip" aria-pressed="false" data-kind={k}>{label}<span class="n">{count(k)}</span></button>
+      ))}
+    </div>
+
+    <ol class="pubs">
+      {sorted.map((p) => (
+        <li class="pub" data-kind={p.kind}>
+          <div class="yr"><span>{p.year}</span></div>
+          <div class="main">
+            <div class="kind lab">{p.kind}</div>
+            <a class="t" href={p.links[0]?.url}>{p.title}</a>
+            <div class="a">
+              {p.authors.map((a, i) => (
+                <>{a === SELF ? <b>{a}</b> : a}{i < p.authors.length - 1 ? ', ' : ''}</>
+              ))}
+            </div>
+          </div>
+          <div class="v">
+            <i>{p.venue}</i>{p.details && <span class="lab"> {p.details}</span>}
+            <div class="clinks">
+              {p.links.map((l) => <a href={l.url}>{l.label}<Icon name="arrow" size={11} /></a>)}
+            </div>
+          </div>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>
+
+<script>
+  const chips = document.querySelectorAll<HTMLButtonElement>('#publications .chip');
+  const items = document.querySelectorAll<HTMLElement>('#publications .pub');
+  chips.forEach((chip) =>
+    chip.addEventListener('click', () => {
+      const k = chip.dataset.kind;
+      chips.forEach((c) => c.setAttribute('aria-pressed', String(c === chip)));
+      items.forEach((it) => (it.hidden = k !== 'all' && it.dataset.kind !== k));
+    }),
+  );
+</script>
+
+<style>
+  .chips { margin-bottom: 22px; }
+  .pubs { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .pub { display: grid; grid-template-columns: 72px 1fr 230px; gap: 22px; padding: 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; transition: border-color .2s, transform .2s; }
+  .pub[hidden] { display: none; }
+  .pub:hover { border-color: var(--accent); transform: translateX(4px); }
+  .yr span { font: 500 12px var(--mono); color: #fff; background: var(--s1); padding: 3px 9px; border-radius: 99px; }
+  .kind { text-transform: uppercase; letter-spacing: .06em; font-size: 10.5px; color: var(--s2); }
+  .t { display: block; font-weight: 650; font-size: 16.5px; line-height: 1.4; letter-spacing: -.01em; margin: 2px 0 4px; }
+  .t:hover { color: var(--accent); }
+  .a { font-size: 13.5px; color: var(--muted); }
+  .a b { color: var(--ink); font-weight: 650; }
+  .v { text-align: right; font-size: 13.5px; color: var(--ink-2); }
+  .v .clinks { justify-content: flex-end; margin-top: 8px; }
+  .clinks a { display: inline-flex; align-items: center; gap: 3px; }
+  @media (max-width: 860px) {
+    .pub { grid-template-columns: 1fr; gap: 8px; }
+    .v { text-align: left; }
+    .v .clinks { justify-content: flex-start; }
+  }
+</style>

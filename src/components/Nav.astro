@@ -1,0 +1,69 @@
+---
+import { profile } from '../data/profile';
+
+const items = [
+  ['experience', 'Experience'],
+  ['projects', 'Projects'],
+  ['publications', 'Publications'],
+  ['talks', 'Talks'],
+  ['service', 'Service'],
+  ['archive', 'Archive'],
+];
+---
+
+<nav class="nav" aria-label="Sections">
+  <div class="wrap row">
+    <a class="brand" href="#top">
+      <svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 1.6 21 6.8v10.4L12 22.4 3 17.2V6.8Z" fill="var(--s1)" stroke="var(--s3)" stroke-width="1.2" stroke-linejoin="round"></path>
+        <path d="M7.6 9.2 10.6 12l-3 2.8" fill="none" stroke="var(--s4)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path>
+        <rect class="cur" x="12" y="14.2" width="4.6" height="1.7" rx=".5" fill="var(--s4)"></rect>
+      </svg>
+      {profile.name}
+    </a>
+    <ul>
+      {items.map(([id, label]) => <li><a href={`#${id}`} data-nav={id}>{label}</a></li>)}
+    </ul>
+  </div>
+</nav>
+
+<script>
+  // highlight the section currently in view
+  const links = new Map(
+    [...document.querySelectorAll<HTMLAnchorElement>('[data-nav]')].map((a) => [a.dataset.nav!, a]),
+  );
+  const obs = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        links.forEach((a) => a.removeAttribute('aria-current'));
+        links.get(e.target.id)?.setAttribute('aria-current', 'true');
+      }
+    },
+    { rootMargin: '-45% 0px -50% 0px' },
+  );
+  links.forEach((_, id) => {
+    const el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+</script>
+
+<style>
+  .nav { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .row { display: flex; justify-content: space-between; align-items: center; height: 58px; gap: 24px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; white-space: nowrap; }
+  .mark { width: 22px; height: 24px; flex: none; }
+  .brand:hover .cur { animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  ul { display: flex; gap: 22px; list-style: none; margin: 0; padding: 0; font-size: 13.5px; overflow-x: auto; scrollbar-width: none; }
+  ul::-webkit-scrollbar { display: none; }
+  ul a { color: var(--muted); white-space: nowrap; position: relative; transition: color .2s; }
+  ul a:hover { color: var(--accent); }
+  ul a[aria-current='true'] { color: var(--ink); }
+  ul a::after { content: ''; position: absolute; left: 50%; bottom: -8px; width: 7px; height: 8px; clip-path: var(--hex); background: var(--accent); transform: translateX(-50%) scale(0); transition: transform .2s; }
+  ul a[aria-current='true']::after { transform: translateX(-50%) scale(1); }
+  @media (max-width: 720px) {
+    .brand { font-size: 0; gap: 0; }
+    ul { gap: 16px; font-size: 13px; }
+  }
+</style>

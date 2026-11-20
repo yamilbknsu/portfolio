@@ -1,0 +1,93 @@
+---
+import { projects } from '../data/projects';
+import type { Org } from '../data/types';
+import SectionHead from './SectionHead.astro';
+import Icon from './Icon.astro';
+
+const orgName: Record<Org, string> = {
+  UofT: 'University of Toronto',
+  NLR: 'National Lab of the Rockies',
+  'NC State': 'NC State',
+  Valencell: 'Valencell',
+  UdeC: 'U. de Concepción',
+  Personal: 'Personal',
+};
+const orgVar: Record<Org, string> = {
+  UofT: 'var(--org-uoft)',
+  NLR: 'var(--org-nlr)',
+  'NC State': 'var(--org-ncsu)',
+  Valencell: 'var(--org-valencell)',
+  UdeC: 'var(--org-udec)',
+  Personal: 'var(--org-personal)',
+};
+const orgs = [...new Set(projects.map((p) => p.org))];
+---
+
+<section class="block" id="projects">
+  <div class="wrap">
+    <SectionHead num="02" kicker="projects" title="Projects">{projects.length} projects · {orgs.length} institutions</SectionHead>
+
+    <div class="chips" role="group" aria-label="Filter projects by institution">
+      <button class="chip" aria-pressed="true" data-org="all">All<span class="n">{projects.length}</span></button>
+      {orgs.map((o) => (
+        <button class="chip" aria-pressed="false" data-org={o}>
+          <span class="hx" style={`--c:${orgVar[o]};width:9px;height:10px;margin-right:6px`}></span>{o}<span class="n">{projects.filter((p) => p.org === o).length}</span>
+        </button>
+      ))}
+    </div>
+
+    <div class="grid">
+      {projects.map((p) => (
+        <article class:list={['card', 'project', { featured: p.featured }]} data-org={p.org} id={`p-${p.id}`}>
+          <div class="meta">
+            <span class="hx" style={`--c:${orgVar[p.org]}`}></span>
+            <span class="lab">{orgName[p.org]}{p.role && ` · ${p.role}`} · {p.years}</span>
+          </div>
+          <h3>{p.title}</h3>
+          <p>{p.description}</p>
+          <div class="foot">
+            <div class="tags">
+              {p.kind.filter((k) => k !== 'lead developer').map((k) => <span class="tag kind">{k}</span>)}
+              {p.tech.map((t) => <span class="tag">{t}</span>)}
+            </div>
+            {p.links.length > 0 && (
+              <div class="clinks">
+                {p.links.map((l) => <a href={l.url}>{l.label}<Icon name="arrow" size={11} /></a>)}
+              </div>
+            )}
+          </div>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<script>
+  const chips = document.querySelectorAll<HTMLButtonElement>('#projects .chip');
+  const cards = document.querySelectorAll<HTMLElement>('#projects .project');
+  chips.forEach((chip) =>
+    chip.addEventListener('click', () => {
+      const org = chip.dataset.org;
+      chips.forEach((c) => c.setAttribute('aria-pressed', String(c === chip)));
+      cards.forEach((card) => (card.hidden = org !== 'all' && card.dataset.org !== org));
+    }),
+  );
+</script>
+
+<style>
+  .chips { margin-bottom: 22px; }
+  .chip { display: inline-flex; align-items: center; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .project { display: flex; flex-direction: column; }
+  .project[hidden] { display: none; }
+  .featured { grid-column: span 2; background: linear-gradient(135deg, #fff 60%, #eaf4fb); }
+  .meta { display: flex; align-items: center; gap: 8px; }
+  h3 { font-size: 20px; line-height: 1.2; letter-spacing: -.02em; font-weight: 700; margin: 10px 0 8px; }
+  .featured h3 { font-size: 28px; }
+  p { margin: 0 0 16px; color: var(--ink-2); font-size: 14.5px; }
+  .featured p { font-size: 15.5px; max-width: 640px; }
+  .foot { margin-top: auto; display: flex; flex-direction: column; gap: 14px; }
+  .clinks a { display: inline-flex; align-items: center; gap: 3px; }
+  @media (max-width: 960px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } .featured { grid-column: auto; } }
+</style>

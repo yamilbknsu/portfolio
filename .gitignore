@@ -1,4 +1,16 @@
-Cargo.lock
+# build output
+dist/
+.astro/
 
-# Added by cargo
-/target
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+
+# environment
+.env
+.env.*
+
+# macOS
+.DS_Store

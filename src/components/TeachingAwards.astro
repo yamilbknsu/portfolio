@@ -1,0 +1,48 @@
+---
+import { teaching, awards } from '../data/misc';
+import SectionHead from './SectionHead.astro';
+---
+
+<section class="block" id="teaching">
+  <div class="wrap">
+    <SectionHead num="06" kicker="teaching & recognition" title="Teaching & awards" />
+    <div class="cols">
+      <div>
+        <h3 class="lab">Teaching & mentoring</h3>
+        <ul>
+          {teaching.map((t) => (
+            <li>
+              <div class="lab">{t.years} · {t.where}</div>
+              <div class="name">{t.role}</div>
+              <div class="d">{t.what}</div>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div>
+        <h3 class="lab">Honors & awards</h3>
+        <ul>
+          {awards.map((a) => (
+            <li class="award">
+              <div class="lab">{a.year}</div>
+              <div class="name">{a.title}</div>
+              <div class="d">{a.detail}</div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; }
+  h3 { margin: 0 0 14px; text-transform: uppercase; letter-spacing: .08em; font-size: 11px; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { padding: 14px 0 14px 16px; border-left: 2px solid var(--line); transition: border-color .2s; }
+  li:hover { border-color: var(--accent); }
+  .award:first-child { border-color: #e8c400; }
+  .name { font-weight: 700; }
+  .d { color: var(--ink-2); font-size: 14.5px; }
+  @media (max-width: 760px) { .cols { grid-template-columns: 1fr; gap: 32px; } }
+</style>

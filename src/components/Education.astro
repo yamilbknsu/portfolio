@@ -1,0 +1,33 @@
+---
+import { education } from '../data/misc';
+import SectionHead from './SectionHead.astro';
+---
+
+<section class="block" id="education">
+  <div class="wrap">
+    <SectionHead num="07" kicker="education" title="Education" />
+    <div class="grid">
+      {education.map((e) => (
+        <div class="card">
+          <div class="lab">{e.years} · {e.place}</div>
+          <h3>{e.degree}</h3>
+          <div class="school">{e.school}</div>
+          {e.link && (
+            <p class="diss">Dissertation: <a class="u" href={e.link.url}><i>{e.link.label}</i></a></p>
+          )}
+          {e.notes && <p class="lab notes">{e.notes}</p>}
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  h3 { font-size: 18px; font-weight: 700; letter-spacing: -.01em; margin: 8px 0 2px; line-height: 1.3; }
+  .school { color: var(--ink-2); font-weight: 500; }
+  .diss { margin: 12px 0 0; font-size: 14px; color: var(--ink-2); }
+  .diss a { color: var(--accent); }
+  .notes { margin: 10px 0 0; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+</style>

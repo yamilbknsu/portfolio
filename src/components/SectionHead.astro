@@ -1,0 +1,16 @@
+---
+interface Props {
+  num: string;
+  kicker: string;
+  title: string;
+}
+const { num, kicker, title } = Astro.props;
+---
+
+<div class="sh">
+  <div>
+    <div class="lab">{num} / {kicker}</div>
+    <h2>{title}</h2>
+  </div>
+  <div class="lab aside"><slot /></div>
+</div>

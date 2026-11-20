@@ -1,0 +1,62 @@
+---
+import { reviewing, otherService } from '../data/misc';
+import { profile } from '../data/profile';
+import SectionHead from './SectionHead.astro';
+
+const total = reviewing.reduce((s, r) => s + r.count, 0);
+---
+
+<section class="block" id="service">
+  <div class="wrap">
+    <SectionHead num="05" kicker="service" title="Service">
+      <a class="u" href={profile.links.orcid}>{total - (total % 5)}+ manuscript reviews · ORCID</a>
+    </SectionHead>
+    <div class="cols">
+      <div class="card">
+        <h3 class="lab">Journal reviewer</h3>
+        <ul class="rev">
+          {reviewing.map((r) => (
+            <li>
+              <div class="j">
+                <span class="name">{r.journal}</span>
+                <span class="lab">{r.publisher} · {r.years}</span>
+              </div>
+              <div class="dots" title={`${r.count} review${r.count > 1 ? 's' : ''}`}>
+                {Array.from({ length: r.count }, () => <span class="hx"></span>)}
+                <span class="lab n">{r.count}</span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div class="card">
+        <h3 class="lab">Conference & university</h3>
+        <ul class="other">
+          {otherService.map((s) => (
+            <li>
+              <div class="name">{s.what}</div>
+              <div class="lab">{s.where} · {s.years}</div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .cols { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; }
+  h3 { margin: 0 0 14px; text-transform: uppercase; letter-spacing: .08em; font-size: 11px; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  .rev li { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); }
+  .rev li:first-child { border-top: 0; padding-top: 0; }
+  .name { font-weight: 600; display: block; line-height: 1.35; }
+  .dots { display: flex; align-items: center; gap: 3px; }
+  .dots .hx { width: 10px; height: 11px; --c: var(--s2); }
+  .rev li:hover .hx { --c: var(--v2); }
+  .rev li:hover .hx:nth-child(odd) { transform: scale(1.2); }
+  .n { margin-left: 6px; min-width: 14px; text-align: right; }
+  .other li { padding: 12px 0; border-top: 1px solid var(--line); }
+  .other li:first-child { border-top: 0; padding-top: 0; }
+  @media (max-width: 860px) { .cols { grid-template-columns: 1fr; } }
+</style>

@@ -1,0 +1,37 @@
+---
+import { profile } from '../data/profile';
+import Icon from './Icon.astro';
+const year = new Date().getFullYear();
+---
+
+<footer>
+  <div class="wrap row">
+    <div>
+      <div class="name">{profile.name}</div>
+      <div class="lab">{profile.coords}</div>
+      <div class="mails lab">
+        <a class="u" href={`mailto:${profile.email}`}>{profile.email}</a> · <a class="u" href={`mailto:${profile.altEmail}`}>{profile.altEmail}</a>
+      </div>
+    </div>
+    <div class="icons">
+      <a href={profile.links.github} aria-label="GitHub"><Icon name="github" size={18} /></a>
+      <a href={profile.links.scholar} aria-label="Google Scholar"><Icon name="scholar" size={18} /></a>
+      <a href={profile.links.orcid} aria-label="ORCID"><Icon name="orcid" size={18} /></a>
+      <a href={profile.links.linkedin} aria-label="LinkedIn"><Icon name="linkedin" size={18} /></a>
+      <a href={`mailto:${profile.email}`} aria-label="Email"><Icon name="mail" size={18} /></a>
+    </div>
+  </div>
+  <div class="wrap lab small">© {year} {profile.name} · Built with Astro · Hosted on GitHub Pages</div>
+</footer>
+
+<style>
+  footer { background: var(--hero); color: var(--hero-ink); padding: 48px 0 36px; --icon-bg: var(--hero); }
+  footer .lab { color: var(--hero-muted); }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .name { font-weight: 800; font-size: 22px; letter-spacing: -.02em; }
+  .mails { margin-top: 6px; }
+  .icons { display: flex; gap: 10px; }
+  .icons a { width: 40px; height: 44px; clip-path: var(--hex); background: rgba(255, 255, 255, .07); display: grid; place-items: center; transition: background .2s, color .2s; --icon-bg: #11192a; }
+  .icons a:hover { background: var(--s3); color: var(--hero); --icon-bg: var(--s3); }
+  .small { margin-top: 32px; opacity: .7; }
+</style>

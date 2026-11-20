@@ -1,0 +1,46 @@
+---
+import { talks } from '../data/talks';
+import SectionHead from './SectionHead.astro';
+
+const years = [...new Set(talks.map((t) => t.year))];
+---
+
+<section class="block" id="talks">
+  <div class="wrap">
+    <SectionHead num="04" kicker="presentations" title="Talks">{talks.length} talks · {years.at(-1)} → {years[0]}</SectionHead>
+    <div class="years">
+      {years.map((y) => (
+        <div class="year">
+          <div class="y">{y}</div>
+          <ul>
+            {talks.filter((t) => t.year === y).map((t) => (
+              <li>
+                <div class="lab">{t.date} · {t.place}</div>
+                <div class="ev">{t.event}</div>
+                <div class="ti">“{t.title}”</div>
+                {t.note && <div class="note lab">{t.note}</div>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .years { display: grid; gap: 8px; }
+  .year { display: grid; grid-template-columns: 120px 1fr; gap: 24px; padding: 18px 0; border-top: 1px solid var(--line); }
+  .year:first-child { border-top: 0; padding-top: 0; }
+  .y { font-weight: 800; font-size: 34px; letter-spacing: -.03em; color: var(--s2); line-height: 1; }
+  ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 28px; }
+  li { padding: 2px 0 2px 14px; border-left: 2px solid var(--line); transition: border-color .2s; }
+  li:hover { border-color: var(--accent); }
+  .ev { font-weight: 700; }
+  .ti { color: var(--ink-2); font-size: 14.5px; }
+  .note { margin-top: 2px; color: var(--s2); }
+  @media (max-width: 760px) {
+    .year { grid-template-columns: 1fr; gap: 12px; }
+    ul { grid-template-columns: 1fr; }
+  }
+</style>
