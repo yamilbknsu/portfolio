@@ -17,8 +17,7 @@ export const projects: Project[] = [
       { label: 'Dataset', url: 'https://zenodo.org/records/18435395' },
       { label: 'Project', url: 'https://sustainablesystems.civmin.utoronto.ca/canoe/' },
     ],
-    featured: true,
-    widget: 'tbd',
+    highlight: 'canoe-graph',
   },
   {
     id: 'temoa',
@@ -47,7 +46,7 @@ export const projects: Project[] = [
       { label: 'GitHub', url: 'https://github.com/NatLabRockies/bambam' },
       { label: 'DOI', url: 'https://doi.org/10.11578/dc.20250905.5' },
     ],
-    widget: 'tbd',
+    highlight: 'access-network',
   },
   {
     id: 'demos',
@@ -57,7 +56,7 @@ export const projects: Project[] = [
     kind: ['open-source', 'software record'],
     tech: ['Python', 'simulation', 'CI/CD'],
     description:
-      'Agent-based demographic microsimulator that evolves synthetic populations through life events. Core refactor for ~70% faster runs, CI/CD and Docker pipelines; additional modules for regional planning with SCAG.',
+      'Agent-based demographic microsimulator that evolves synthetic populations through life events. Core refactor, CI/CD and Docker pipelines; additional modules for regional planning with SCAG.',
     links: [
       { label: 'GitHub', url: 'https://github.com/NatLabRockies/DEMOS' },
       { label: 'Docs', url: 'https://natlabrockies.github.io/DEMOS/pages/intro.html' },
@@ -100,7 +99,7 @@ export const projects: Project[] = [
     description:
       'Random train/test splits inflate outage-model skill through spatial and temporal autocorrelation. Under leave-one-state-out and leave-one-event-out splits, models often fail to beat a null baseline, even with Prithvi WxC embeddings.',
     links: [{ label: 'arXiv', url: 'https://arxiv.org/abs/2608.24665' }],
-    widget: 'tbd',
+    highlight: 'outage-model',
   },
   {
     id: 'u-prithvi',
@@ -151,7 +150,7 @@ export const projects: Project[] = [
     kind: ['industry'],
     tech: ['GCP', 'Kubernetes', 'Docker'],
     description:
-      'Model-agnostic training pipeline on Vertex AI and a GKE processing cluster with a 27× speedup. Proprietary work, so no links.',
+      'Model-agnostic training pipeline on Vertex AI with GPU containers, wired into automated data ingestion and deployment, plus a GKE processing cluster that made feature generation 27× faster.',
     links: [],
   },
 ];

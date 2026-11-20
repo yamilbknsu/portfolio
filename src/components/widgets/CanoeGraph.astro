@@ -1,0 +1,111 @@
+---
+// Symbolic Temoa-style energy network: commodities (circles) flow through
+// technologies (boxes) from resources to end-use demands. Pure SVG + CSS animation.
+type Kind = 'res' | 'tech' | 'carrier' | 'demand' | 'emis';
+interface N { id: string; x: number; y: number; kind: Kind; label: string }
+
+const COL = [52, 166, 296, 424, 546];
+const nodes: N[] = [
+  { id: 'wind', x: COL[0], y: 70, kind: 'res', label: 'wind' },
+  { id: 'solar', x: COL[0], y: 150, kind: 'res', label: 'solar' },
+  { id: 'gas', x: COL[0], y: 230, kind: 'res', label: 'gas' },
+  { id: 'WT', x: COL[1], y: 70, kind: 'tech', label: 'WT' },
+  { id: 'PV', x: COL[1], y: 150, kind: 'tech', label: 'PV' },
+  { id: 'CCGT', x: COL[1], y: 230, kind: 'tech', label: 'CCGT' },
+  { id: 'ELC', x: COL[2], y: 110, kind: 'carrier', label: 'ELC' },
+  { id: 'ELZ', x: COL[2], y: 172, kind: 'tech', label: 'ELZ' },
+  { id: 'H2', x: COL[2], y: 234, kind: 'carrier', label: 'H₂' },
+  { id: 'CO2', x: COL[2] - 40, y: 290, kind: 'emis', label: 'CO₂' },
+  { id: 'EV', x: COL[3], y: 70, kind: 'tech', label: 'EV' },
+  { id: 'HP', x: COL[3], y: 150, kind: 'tech', label: 'HP' },
+  { id: 'FC', x: COL[3], y: 230, kind: 'tech', label: 'FCEV' },
+  { id: 'pkm', x: COL[4], y: 70, kind: 'demand', label: 'passenger' },
+  { id: 'heat', x: COL[4], y: 150, kind: 'demand', label: 'heat' },
+  { id: 'tkm', x: COL[4], y: 230, kind: 'demand', label: 'freight' },
+];
+const at = Object.fromEntries(nodes.map((n) => [n.id, n]));
+const edges: [string, string][] = [
+  ['wind', 'WT'], ['solar', 'PV'], ['gas', 'CCGT'],
+  ['WT', 'ELC'], ['PV', 'ELC'], ['CCGT', 'ELC'],
+  ['ELC', 'ELZ'], ['ELZ', 'H2'],
+  ['ELC', 'EV'], ['ELC', 'HP'], ['H2', 'FC'],
+  ['EV', 'pkm'], ['HP', 'heat'], ['FC', 'tkm'],
+];
+const pad = (n: N) => (n.kind === 'tech' ? 24 : n.kind === 'demand' ? 13 : 10);
+function path(a: N, b: N) {
+  if (Math.abs(a.x - b.x) < 1) {
+    const s = Math.sign(b.y - a.y);
+    return `M${a.x} ${a.y + s * (a.kind === 'tech' ? 11 : 10)} L${b.x} ${b.y - s * (b.kind === 'tech' ? 11 : 10)}`;
+  }
+  const x1 = a.x + pad(a), x2 = b.x - pad(b), mx = (x1 + x2) / 2;
+  return `M${x1} ${a.y} C${mx} ${a.y} ${mx} ${b.y} ${x2} ${b.y}`;
+}
+// order edges left to right so the flow appears to travel through the network
+const flows = edges.map(([a, b], i) => ({ d: path(at[a], at[b]), delay: ((at[a].x - COL[0]) / 160 + (i % 3) * 0.15).toFixed(2) }));
+const emission = `M${at.CCGT.x + 10} ${at.CCGT.y + 11} C${at.CCGT.x + 10} 290 ${at.CO2.x - 40} 290 ${at.CO2.x - 10} 290`;
+const heads = ['resources', 'supply tech', 'carriers', 'end-use tech', 'demands'];
+---
+
+<figure class="canoe">
+  <svg viewBox="0 0 600 320" role="img" aria-label="Animated, symbolic energy-system network: resources flow through supply technologies into electricity and hydrogen, then through end-use technologies to meet demands.">
+    <defs>
+      <radialGradient id="cg-glow"><stop offset="0" stop-color="#fde725" stop-opacity=".45" /><stop offset="1" stop-color="#fde725" stop-opacity="0" /></radialGradient>
+    </defs>
+    {heads.map((h, i) => <text class="head" x={COL[i]} y="24" text-anchor="middle">{h}</text>)}
+    {COL.map((x) => <line class="col" x1={x} y1="36" x2={x} y2="300" />)}
+
+    <g class="edges">
+      {flows.map((f) => <path class="base" d={f.d} />)}
+      {flows.map((f) => <path class="flow" d={f.d} style={`animation-delay:-${f.delay}s`} />)}
+      <path class="emis-edge" d={emission} />
+    </g>
+
+    {nodes.map((n) => (
+      <g class={`node ${n.kind}`} transform={`translate(${n.x} ${n.y})`}>
+        {n.kind === 'tech' && <rect x="-24" y="-11" width="48" height="22" rx="5" />}
+        {n.kind === 'tech' && <text class="in" y="3.5" text-anchor="middle">{n.label}</text>}
+        {(n.kind === 'res' || n.kind === 'carrier' || n.kind === 'emis') && <circle r={n.kind === 'carrier' ? 10 : 8} />}
+        {n.kind === 'carrier' && <text class="in" y="3.5" text-anchor="middle">{n.label}</text>}
+        {n.kind === 'demand' && <circle class="halo" r="22" fill="url(#cg-glow)" />}
+        {n.kind === 'demand' && <circle r="10" />}
+        {n.kind === 'demand' && <circle class="ring" r="13" />}
+        {(n.kind === 'res' || n.kind === 'demand' || n.kind === 'emis') && <text class="lbl" y={n.kind === 'demand' ? 30 : 23} text-anchor="middle">{n.label}</text>}
+      </g>
+    ))}
+  </svg>
+  <figcaption class="legend">
+    <span><i class="lc"></i>commodity</span><span><i class="lt"></i>technology</span><span><i class="ld"></i>demand</span>
+    <span class="note">symbolic Temoa-style network</span>
+  </figcaption>
+</figure>
+
+<style>
+  .canoe { margin: 0; height: 100%; display: flex; flex-direction: column; }
+  svg { width: 100%; height: auto; flex: 1; overflow: visible; }
+  .head { font: 10px var(--mono); fill: #7f8fa3; letter-spacing: .04em; }
+  .col { stroke: rgba(255, 255, 255, .05); stroke-dasharray: 2 4; }
+  .base { fill: none; stroke: rgba(105, 175, 199, .22); stroke-width: 1.6; }
+  .flow { fill: none; stroke: #69afc7; stroke-width: 2.2; stroke-linecap: round; stroke-dasharray: 3 22; animation: flow 1.6s linear infinite; filter: drop-shadow(0 0 3px rgba(105, 175, 199, .8)); }
+  @keyframes flow { to { stroke-dashoffset: -25; } }
+  .emis-edge { fill: none; stroke: rgba(127, 143, 163, .45); stroke-width: 1.2; stroke-dasharray: 2 4; }
+  .node { transition: transform .3s; }
+  .node rect { fill: #25346b; stroke: #69afc7; stroke-width: 1.2; transition: fill .25s; }
+  .node circle { fill: #050913; stroke: #69afc7; stroke-width: 1.6; transition: fill .25s; }
+  .carrier circle { fill: #396fa5; stroke: #eafdfd; }
+  .emis circle { stroke: #7f8fa3; stroke-dasharray: 2 2; }
+  .demand circle { fill: #fde725; stroke: none; }
+  .demand .ring { fill: none; stroke: #fde725; stroke-width: 1; opacity: .6; animation: ring 2.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+  .demand .halo { stroke: none; fill: url(#cg-glow); }
+  .tech:hover rect, .res:hover circle { fill: #396fa5; }
+  @keyframes ring { from { transform: scale(.8); opacity: .8; } to { transform: scale(1.6); opacity: 0; } }
+  .in { font: 600 9px var(--mono); fill: #eafdfd; pointer-events: none; }
+  .carrier .in { font-size: 8.5px; }
+  .lbl { font: 10px var(--mono); fill: #a9b6c4; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font: 10.5px var(--mono); color: #7f8fa3; padding-top: 10px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { display: inline-block; }
+  .lc { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid #69afc7; }
+  .lt { width: 14px; height: 8px; border-radius: 2px; background: #25346b; border: 1px solid #69afc7; }
+  .ld { width: 9px; height: 9px; border-radius: 50%; background: #fde725; }
+  .legend .note { margin-left: auto; opacity: .8; }
+</style>

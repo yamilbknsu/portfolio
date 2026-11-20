@@ -1,0 +1,56 @@
+---
+import { projects } from '../data/projects';
+import SectionHead from './SectionHead.astro';
+import Icon from './Icon.astro';
+import CanoeGraph from './widgets/CanoeGraph.astro';
+import AccessNetwork from './widgets/AccessNetwork.astro';
+import OutageModel from './widgets/OutageModel.astro';
+
+const orgName = { UofT: 'University of Toronto', NLR: 'National Lab of the Rockies', 'NC State': 'NC State', Valencell: 'Valencell', UdeC: 'U. de Concepción', Personal: 'Personal' };
+const order = ['canoe-graph', 'access-network', 'outage-model'];
+const items = projects.filter((p) => p.highlight).sort((a, b) => order.indexOf(a.highlight!) - order.indexOf(b.highlight!));
+---
+
+<section class="block" id="highlights">
+  <div class="wrap">
+    <SectionHead num="01" kicker="highlights" title="Highlighted work">{items.length} projects</SectionHead>
+    <div class="list">
+      {items.map((p, i) => (
+        <article class:list={['hl', { flip: i % 2 === 1 }]} id={`p-${p.id}`}>
+          <div class="txt">
+            <div class="lab">{orgName[p.org]}{p.role && ` · ${p.role}`} · {p.years}</div>
+            <h3>{p.title}</h3>
+            <p>{p.description}</p>
+            <div class="tags">
+              {p.kind.filter((k) => k !== 'lead developer').map((k) => <span class="tag kind">{k}</span>)}
+              {p.tech.map((t) => <span class="tag">{t}</span>)}
+            </div>
+            <div class="clinks">{p.links.map((l) => <a href={l.url}>{l.label}<Icon name="arrow" size={11} /></a>)}</div>
+          </div>
+          <div class="viz">
+            {p.highlight === 'canoe-graph' && <CanoeGraph />}
+            {p.highlight === 'access-network' && <AccessNetwork />}
+            {p.highlight === 'outage-model' && <OutageModel />}
+          </div>
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .list { display: grid; gap: 28px; }
+  .hl { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: 36px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 28px; transition: box-shadow .3s, border-color .3s; }
+  .hl:hover { box-shadow: 0 22px 44px -26px rgba(16, 24, 34, .45); border-color: color-mix(in srgb, var(--accent) 30%, var(--line)); }
+  .flip .txt { order: 2; }
+  h3 { font-size: 28px; line-height: 1.15; letter-spacing: -.025em; font-weight: 750; margin: 10px 0 10px; }
+  p { margin: 0 0 18px; color: var(--ink-2); font-size: 15px; }
+  .clinks { margin-top: 16px; }
+  .clinks a { display: inline-flex; align-items: center; gap: 3px; }
+  .viz { background: var(--hero); border-radius: 12px; padding: 16px; min-height: 330px; display: flex; flex-direction: column; overflow: hidden; }
+  .viz > :global(figure) { flex: 1; }
+  @media (max-width: 900px) {
+    .hl { grid-template-columns: 1fr; padding: 20px; gap: 22px; }
+    .flip .txt { order: 0; }
+  }
+</style>

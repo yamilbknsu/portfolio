@@ -1,0 +1,187 @@
+---
+// BAMBAM-style access story on a loop: points of interest appear, a road network
+// grows between them, services attach, then a shortest-path search finds the nearest one.
+---
+
+<figure class="access">
+  <canvas aria-label="Animation: points form a road network, services attach to it, and a shortest path is traced from a home to the nearest service." role="img"></canvas>
+</figure>
+
+<script>
+  import { runWidget, rng, PALETTE, ramp, ease } from '../../scripts/widget-loop';
+
+  type Svc = 'hospital' | 'grocery' | 'school' | 'pharmacy' | 'park' | 'transit';
+  const TYPES: Svc[] = ['grocery', 'hospital', 'pharmacy', 'school', 'transit', 'park'];
+  const CYCLE = 13; // seconds per story
+  const STEPS = ['points of interest', 'road network', 'attach services', 'shortest path'];
+
+  for (const canvas of document.querySelectorAll<HTMLCanvasElement>('.access canvas')) {
+    let pts: { x: number; y: number; d: number }[] = [];
+    let edges: { a: number; b: number; len: number; order: number }[] = [];
+    let adj: { to: number; w: number }[][] = [];
+    let svcs: { node: number; type: Svc; x: number; y: number; order: number }[] = [];
+    let origin = 0, target: (typeof svcs)[number] | null = null, path: number[] = [], dist: number[] = [], dmax = 1;
+    let cycle = -1;
+
+    function generate(W: number, H: number, seed: number) {
+      const r = rng(seed * 7919 + 13);
+      const n = Math.round(Math.max(60, Math.min(130, (W * H) / 2400)));
+      const m = 22;
+      // clustered points: a few neighbourhoods plus scattered points
+      const centers = Array.from({ length: 3 }, () => [m + 40 + r() * (W - 2 * m - 80), m + 30 + r() * (H - 2 * m - 70)]);
+      pts = [];
+      while (pts.length < n) {
+        const c = centers[Math.floor(r() * centers.length)], g = r() < 0.65;
+        const x = g ? c[0] + (r() + r() + r() - 1.5) * W * 0.22 : m + r() * (W - 2 * m);
+        const y = g ? c[1] + (r() + r() + r() - 1.5) * H * 0.3 : m + r() * (H - 2 * m - 26);
+        if (x < m || x > W - m || y < m || y > H - m - 26) continue;
+        if (pts.some((p) => Math.hypot(p.x - x, p.y - y) < 14)) continue;
+        pts.push({ x, y, d: r() });
+      }
+      // Gabriel graph: connect i-j when no other point lies inside the circle with diameter ij
+      edges = []; adj = pts.map(() => []);
+      const maxLen = Math.min(W, H) * 0.32;
+      for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+        const a = pts[i], b = pts[j], len = Math.hypot(a.x - b.x, a.y - b.y);
+        if (len > maxLen) continue;
+        const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2, rr = (len / 2) ** 2;
+        let ok = true;
+        for (let k = 0; k < n && ok; k++) if (k !== i && k !== j && (pts[k].x - cx) ** 2 + (pts[k].y - cy) ** 2 < rr) ok = false;
+        if (!ok) continue;
+        edges.push({ a: i, b: j, len, order: Math.hypot(cx - W / 2, cy - H / 2) / Math.hypot(W / 2, H / 2) + r() * 0.15 });
+        adj[i].push({ to: j, w: len }); adj[j].push({ to: i, w: len });
+      }
+      // services: farthest-point sampling so they spread across the map
+      const pick: number[] = [Math.floor(r() * n)];
+      while (pick.length < 6) {
+        let best = 0, bd = -1;
+        for (let i = 0; i < n; i++) { const d = Math.min(...pick.map((p) => Math.hypot(pts[i].x - pts[p].x, pts[i].y - pts[p].y))); if (d > bd) { bd = d; best = i; } }
+        pick.push(best);
+      }
+      svcs = pick.map((node, i) => {
+        const p = pts[node], ang = r() * Math.PI * 2;
+        return { node, type: TYPES[(i + seed) % TYPES.length], x: p.x + Math.cos(ang) * 16, y: p.y + Math.sin(ang) * 16, order: i };
+      });
+      // origin: a central-ish node, away from services; target type rotates each cycle
+      const want = TYPES[seed % TYPES.length];
+      let ob = 0, os = -1;
+      for (let i = 0; i < n; i++) {
+        const p = pts[i], centre = 1 - Math.hypot(p.x - W / 2, p.y - H / 2) / Math.hypot(W / 2, H / 2);
+        const away = Math.min(...svcs.map((s) => Math.hypot(p.x - s.x, p.y - s.y)));
+        const score = centre * 0.6 + Math.min(1, away / 120) * 0.4 + r() * 0.1;
+        if (score > os && adj[i].length) { os = score; ob = i; }
+      }
+      origin = ob;
+      // Dijkstra from origin
+      dist = pts.map(() => Infinity); const prev = pts.map(() => -1), done = pts.map(() => false);
+      dist[origin] = 0;
+      for (;;) {
+        let u = -1, du = Infinity;
+        for (let i = 0; i < n; i++) if (!done[i] && dist[i] < du) { du = dist[i]; u = i; }
+        if (u < 0) break; done[u] = true;
+        for (const { to, w } of adj[u]) if (du + w < dist[to]) { dist[to] = du + w; prev[to] = u; }
+      }
+      const cands = svcs.filter((s) => s.type === want && isFinite(dist[s.node]));
+      const pool = cands.length ? cands : svcs.filter((s) => isFinite(dist[s.node]));
+      target = pool.sort((a, b) => dist[a.node] - dist[b.node])[0] ?? null;
+      path = [];
+      if (target) for (let v = target.node; v >= 0; v = prev[v]) path.unshift(v);
+      dmax = target ? dist[target.node] * 1.25 : 1;
+    }
+
+    function icon(ctx: CanvasRenderingContext2D, s: (typeof svcs)[number], k: number, hot: boolean) {
+      const { x, y } = s, z = 9 * k;
+      if (z < 0.5) return;
+      const p = pts[s.node];
+      ctx.strokeStyle = hot ? 'rgba(253,231,37,.8)' : 'rgba(105,175,199,.6)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(x, y); ctx.stroke();
+      ctx.fillStyle = hot ? PALETTE.vir[4] : PALETTE.ice[2];
+      ctx.beginPath(); ctx.roundRect(x - z, y - z, 2 * z, 2 * z, 3 * k); ctx.fill();
+      ctx.fillStyle = ctx.strokeStyle = hot ? '#1c1044' : '#fff'; ctx.lineWidth = 1.4 * k;
+      const u = z * 0.55;
+      ctx.beginPath();
+      switch (s.type) {
+        case 'hospital': ctx.fillRect(x - u * 0.25, y - u, u * 0.5, 2 * u); ctx.fillRect(x - u, y - u * 0.25, 2 * u, u * 0.5); break;
+        case 'grocery': ctx.moveTo(x - u, y - u * 0.6); ctx.lineTo(x + u, y - u * 0.6); ctx.lineTo(x + u * 0.6, y + u * 0.3); ctx.lineTo(x - u * 0.6, y + u * 0.3); ctx.closePath(); ctx.stroke();
+          ctx.beginPath(); ctx.arc(x - u * 0.45, y + u * 0.8, u * 0.2, 0, 7); ctx.arc(x + u * 0.45, y + u * 0.8, u * 0.2, 0, 7); ctx.fill(); break;
+        case 'school': ctx.moveTo(x - u, y - u * 0.1); ctx.lineTo(x, y - u); ctx.lineTo(x + u, y - u * 0.1); ctx.closePath(); ctx.fill(); ctx.fillRect(x - u * 0.7, y - u * 0.05, u * 1.4, u); break;
+        case 'pharmacy': ctx.save(); ctx.translate(x, y); ctx.rotate(-Math.PI / 4); ctx.beginPath(); ctx.roundRect(-u, -u * 0.42, 2 * u, u * 0.84, u * 0.42); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, -u * 0.42); ctx.lineTo(0, u * 0.42); ctx.stroke(); ctx.restore(); break;
+        case 'park': ctx.arc(x, y - u * 0.25, u * 0.65, 0, 7); ctx.fill(); ctx.fillRect(x - u * 0.12, y, u * 0.24, u); break;
+        case 'transit': ctx.roundRect(x - u * 0.75, y - u, u * 1.5, u * 1.5, u * 0.3); ctx.stroke(); ctx.beginPath(); ctx.arc(x - u * 0.4, y + u * 0.8, u * 0.18, 0, 7); ctx.arc(x + u * 0.4, y + u * 0.8, u * 0.18, 0, 7); ctx.fill(); break;
+      }
+    }
+
+    runWidget(canvas, {
+      stillTime: 10.5,
+      setup: ({ W, H }) => { cycle = -1; generate(W, H, 1); },
+      frame: ({ ctx, W, H }, t) => {
+        const k = Math.floor(t / CYCLE), s = t - k * CYCLE;
+        if (k !== cycle) { cycle = k; generate(W, H, k + 1); }
+        ctx.fillStyle = PALETTE.bg; ctx.fillRect(0, 0, W, H);
+        const fadeOut = 1 - ease((s - 12.2) / 0.8);
+        ctx.globalAlpha = fadeOut;
+
+        // 1. points
+        const pPh = s / 1.6;
+        // 2. roads grow outward from the centre
+        const ePh = (s - 1.4) / 2.6;
+        for (const e of edges) {
+          const g = ease((ePh - e.order * 0.8) / 0.25);
+          if (g <= 0) continue;
+          const a = pts[e.a], b = pts[e.b];
+          const lit = s > 5.6 && Math.max(dist[e.a], dist[e.b]) < dmax * ease((s - 5.6) / 2.6);
+          ctx.strokeStyle = lit ? ramp(PALETTE.vir, 0.35 + 0.5 * (1 - Math.min(dist[e.a], dist[e.b]) / dmax), 0.55) : 'rgba(105,175,199,.28)';
+          ctx.lineWidth = lit ? 1.6 : 1;
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(a.x + (b.x - a.x) * g, a.y + (b.y - a.y) * g); ctx.stroke();
+        }
+        for (let i = 0; i < pts.length; i++) {
+          const p = pts[i], a = ease((pPh - p.d * 0.7) / 0.3);
+          if (a <= 0) continue;
+          const reach = s > 5.6 && dist[i] < dmax * ease((s - 5.6) / 2.6);
+          ctx.fillStyle = reach ? ramp(PALETTE.vir, 0.4 + 0.6 * (1 - dist[i] / dmax)) : `rgba(169,182,196,${0.8 * a})`;
+          ctx.beginPath(); ctx.arc(p.x, p.y, reach ? 2.6 : 2 * a, 0, 7); ctx.fill();
+        }
+        // 3. services pop in
+        for (const sv of svcs) {
+          const g = ease((s - 4.1 - sv.order * 0.18) / 0.35);
+          const pop = g < 1 ? g * (1 + 0.25 * Math.sin(g * Math.PI)) : 1;
+          icon(ctx, sv, pop, s > 8.4 && sv === target);
+        }
+        // origin (home)
+        if (s > 5.2) {
+          const o = pts[origin], pulse = (s * 0.9) % 1;
+          ctx.strokeStyle = `rgba(253,231,37,${0.8 * (1 - pulse)})`; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.arc(o.x, o.y, 5 + 12 * pulse, 0, 7); ctx.stroke();
+          ctx.fillStyle = PALETTE.vir[4]; ctx.beginPath(); ctx.arc(o.x, o.y, 4.5, 0, 7); ctx.fill();
+        }
+        // 4. trace the shortest path
+        if (s > 8.2 && path.length > 1) {
+          const g = ease((s - 8.2) / 1.4) * (path.length - 1);
+          ctx.save(); ctx.strokeStyle = PALETTE.vir[4]; ctx.lineWidth = 3; ctx.lineCap = ctx.lineJoin = 'round';
+          ctx.shadowColor = 'rgba(253,231,37,.7)'; ctx.shadowBlur = 10;
+          ctx.beginPath(); ctx.moveTo(pts[path[0]].x, pts[path[0]].y);
+          for (let i = 1; i <= Math.floor(g); i++) ctx.lineTo(pts[path[i]].x, pts[path[i]].y);
+          const f = g - Math.floor(g), i0 = Math.floor(g);
+          if (f > 0 && i0 + 1 < path.length) { const a = pts[path[i0]], b = pts[path[i0 + 1]]; ctx.lineTo(a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f); }
+          ctx.stroke(); ctx.restore();
+        }
+        ctx.globalAlpha = 1;
+        // step label
+        const step = s < 1.4 ? 0 : s < 4.1 ? 1 : s < 5.4 ? 2 : 3;
+        ctx.font = '11px "Spline Sans Mono", monospace'; ctx.textBaseline = 'alphabetic';
+        const seg = Math.min(70, (W - 28) / 4);
+        STEPS.forEach((_, i) => {
+          ctx.fillStyle = i === step ? PALETTE.vir[4] : i < step ? 'rgba(105,175,199,.7)' : 'rgba(127,143,163,.3)';
+          ctx.fillRect(14 + i * seg, H - 30, seg - 8, 2);
+        });
+        ctx.fillStyle = PALETTE.ink;
+        ctx.fillText(`${step + 1}/4 · ${step === 3 && target ? `shortest path to the nearest ${target.type}` : STEPS[step]}`, 14, H - 12);
+      },
+    });
+  }
+</script>
+
+<style>
+  .access { margin: 0; height: 100%; }
+  canvas { display: block; width: 100%; height: 100%; min-height: 300px; }
+</style>

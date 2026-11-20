@@ -1,0 +1,145 @@
+---
+// Weather → ML model → predicted outages. The evaluation mode alternates between a
+// random split (predictions hug the observations) and a spatial holdout (they regress
+// toward the mean), which is the point of the data-leakage paper. All synthetic.
+---
+
+<figure class="outage">
+  <canvas role="img" aria-label="Animation: a storm passes over a region, its weather features feed a neural network, and predicted power outages are compared with observed ones under a random split and under a spatial holdout."></canvas>
+  <figcaption>outages: filled = predicted · outline = observed · synthetic scene</figcaption>
+</figure>
+
+<script>
+  import { runWidget, rng, PALETTE, ramp, ease, hexPath } from '../../scripts/widget-loop';
+
+  const MODE_S = 7; // seconds per evaluation mode
+  const LAYERS = [5, 7, 7, 4];
+
+  for (const canvas of document.querySelectorAll<HTMLCanvasElement>('.outage canvas')) {
+    let cells: { u: number; v: number; expo: number; noise: number }[] = [];
+    let R = 8, pw = 160, ph = 160, top = 40, L0 = 12, R0 = 0;
+    let nodes: { x: number; y: number }[][] = [];
+    let pulses: { l: number; a: number; b: number; p: number; v: number }[] = [];
+    let mix = 0;
+    const r = rng(42);
+
+    function setup(W: number, H: number) {
+      pw = Math.min(W * 0.3, (H - 90) * 1.05); ph = pw; top = Math.max(40, (H - ph) / 2 - 6);
+      L0 = 14; R0 = W - pw - 14; R = pw / 15;
+      // a region shaped like a blob of counties on a hex grid
+      cells = [];
+      const cw = Math.sqrt(3) * R, ch = 1.5 * R;
+      for (let row = 0; row * ch <= ph; row++) for (let c = 0; c * cw <= pw; c++) {
+        const x = c * cw + (row & 1 ? cw / 2 : 0), y = row * ch;
+        const u = x / pw - 0.5, v = y / ph - 0.5, ang = Math.atan2(v, u);
+        const edge = 0.43 + 0.05 * Math.sin(ang * 3 + 1) + 0.03 * Math.sin(ang * 5);
+        if (Math.hypot(u, v) > edge) continue;
+        cells.push({ u: x, v: y, expo: 0.45 + 0.55 * r(), noise: r() - 0.5 });
+      }
+      // network nodes between the two panels
+      const x1 = L0 + pw + 34, x2 = R0 - 34;
+      nodes = LAYERS.map((n, li) => Array.from({ length: n }, (_, i) => ({
+        x: x1 + ((x2 - x1) * li) / (LAYERS.length - 1),
+        y: top + ph / 2 + (i - (n - 1) / 2) * Math.min(26, (ph - 10) / n),
+      })));
+      pulses = [];
+    }
+
+    const weather = (c: (typeof cells)[number], t: number) => {
+      // a storm crossing the region on a slow loop, with spiral bands
+      const k = (t % 9) / 9, sx = -0.15 + 1.3 * k, sy = 0.5 + 0.16 * Math.sin(k * Math.PI * 2);
+      const dx = c.u / pw - sx, dy = c.v / ph - sy, d2 = dx * dx + dy * dy, th = Math.atan2(dy, dx);
+      const band = 0.7 + 0.3 * Math.sin(2 * th - Math.sqrt(d2) * 18 + t * 3);
+      return Math.min(1, Math.exp(-d2 / 0.07) * band + 0.08 + 0.05 * c.noise);
+    };
+    const truth = (w: number, expo: number) => 1 / (1 + Math.exp(-9 * (w * expo - 0.35)));
+
+    runWidget(canvas, {
+      stillTime: 3.2,
+      setup: ({ W, H }) => setup(W, H),
+      frame: ({ ctx, W, H }, t, dt) => {
+        ctx.fillStyle = PALETTE.bg; ctx.fillRect(0, 0, W, H);
+        const holdout = Math.floor(t / MODE_S) % 2 === 1;
+        mix += ((holdout ? 1 : 0) - mix) * Math.min(1, dt * 2.5);
+        if (dt === 0) mix = holdout ? 1 : 0;
+
+        const ws = cells.map((c) => weather(c, t));
+        const obs = cells.map((c, i) => truth(ws[i], c.expo));
+        const mean = obs.reduce((a, b) => a + b, 0) / obs.length;
+        // random split: near-perfect recall of seen locations; spatial holdout: shrinks toward the mean
+        const pred = obs.map((o, i) => Math.max(0, Math.min(1, (1 - mix) * (o + 0.16 * cells[i].noise) + mix * (0.3 * o + 0.7 * mean + 0.25 * cells[i].noise))));
+
+        ctx.font = '10.5px "Spline Sans Mono", monospace'; ctx.textAlign = 'left';
+        const label = (txt: string, x: number) => { ctx.fillStyle = '#7f8fa3'; ctx.fillText(txt, x, top - 14); };
+        label('weather', L0); label('model', nodes[0][0].x - 6); label('outages', R0);
+
+        // left: weather, size + ice colour encode storm intensity
+        for (let i = 0; i < cells.length; i++) {
+          const c = cells[i], w = ws[i];
+          ctx.fillStyle = ramp(PALETTE.ice, 0.25 + 0.75 * w, 0.35 + 0.6 * w);
+          hexPath(ctx, L0 + c.u, top + c.v, (R - 1) * Math.max(0.25, w)); ctx.fill();
+        }
+        // network edges + travelling pulses (rate follows storm strength)
+        ctx.lineWidth = 1;
+        for (let l = 0; l < nodes.length - 1; l++) for (const a of nodes[l]) for (const b of nodes[l + 1]) {
+          ctx.strokeStyle = 'rgba(105,175,199,.10)'; ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+        }
+        const storm = Math.max(...ws);
+        if (Math.random() < dt * (10 + 30 * storm)) {
+          const l = Math.floor(Math.random() * (nodes.length - 1));
+          pulses.push({ l, a: Math.floor(Math.random() * nodes[l].length), b: Math.floor(Math.random() * nodes[l + 1].length), p: 0, v: 0.6 + Math.random() * 0.8 });
+        }
+        pulses = pulses.filter((p) => (p.p += dt * p.v * 1.6) < 1);
+        for (const p of pulses) {
+          const a = nodes[p.l][p.a], b = nodes[p.l + 1][p.b], x = a.x + (b.x - a.x) * p.p, y = a.y + (b.y - a.y) * p.p;
+          ctx.fillStyle = ramp(PALETTE.vir, 0.5 + 0.5 * p.p, 0.9); ctx.beginPath(); ctx.arc(x, y, 1.8, 0, 7); ctx.fill();
+        }
+        // input streams from the weather panel into the first layer, output streams into the map
+        const flow = (x1: number, y1: number, x2: number, y2: number, ph0: number) => {
+          ctx.strokeStyle = 'rgba(105,175,199,.18)'; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.bezierCurveTo((x1 + x2) / 2, y1, (x1 + x2) / 2, y2, x2, y2); ctx.stroke();
+          const q = (t * 0.8 + ph0) % 1, mx = (x1 + x2) / 2, it = 1 - q;
+          const x = it ** 3 * x1 + 3 * it * it * q * mx + 3 * it * q * q * mx + q ** 3 * x2, y = it ** 3 * y1 + 3 * it * it * q * y1 + 3 * it * q * q * y2 + q ** 3 * y2;
+          ctx.fillStyle = 'rgba(234,253,253,.8)'; ctx.beginPath(); ctx.arc(x, y, 1.6, 0, 7); ctx.fill();
+        };
+        nodes[0].forEach((n, i) => flow(L0 + pw - 6, top + ph * (0.2 + 0.15 * i), n.x - 5, n.y, i * 0.21));
+        nodes[nodes.length - 1].forEach((n, i) => flow(n.x + 5, n.y, R0 + 6, top + ph * (0.25 + 0.17 * i), i * 0.27 + 0.5));
+        for (const layer of nodes) for (const n of layer) {
+          ctx.fillStyle = '#25346b'; ctx.strokeStyle = '#69afc7'; ctx.lineWidth = 1.2;
+          hexPath(ctx, n.x, n.y, 5.5); ctx.fill(); ctx.stroke();
+        }
+        // right: predicted outages (size + viridis) over observed outlines
+        for (let i = 0; i < cells.length; i++) {
+          const c = cells[i], x = R0 + c.u, y = top + c.v;
+          ctx.strokeStyle = `rgba(234,253,253,${0.12 + 0.55 * obs[i]})`; ctx.lineWidth = 1;
+          hexPath(ctx, x, y, (R - 1) * Math.max(0.25, obs[i])); ctx.stroke();
+          ctx.fillStyle = ramp(PALETTE.vir, 0.15 + 0.85 * pred[i], 0.85);
+          hexPath(ctx, x, y, (R - 1.5) * Math.max(0.15, pred[i])); ctx.fill();
+        }
+        // agreement between predictions and observations (computed on this synthetic scene)
+        const mp = pred.reduce((a, b) => a + b, 0) / pred.length;
+        let sxy = 0, sxx = 0, syy = 0;
+        for (let i = 0; i < obs.length; i++) { const a = pred[i] - mp, b = obs[i] - mean; sxy += a * b; sxx += a * a; syy += b * b; }
+        const rr = sxx && syy ? Math.max(0, sxy / Math.sqrt(sxx * syy)) : 0;
+        const by = top + ph + 30;
+        ctx.textAlign = 'left';
+        ctx.fillStyle = holdout ? PALETTE.ink : 'rgba(127,143,163,.65)'; ctx.fillText('spatial holdout', R0, by);
+        ctx.fillStyle = !holdout ? PALETTE.ink : 'rgba(127,143,163,.65)'; ctx.fillText('random split', L0, by);
+        ctx.fillStyle = '#7f8fa3'; ctx.textAlign = 'center';
+        ctx.fillText(`agreement r = ${rr.toFixed(2)}`, W / 2, by);
+        const bw = Math.min(180, W * 0.3);
+        ctx.fillStyle = 'rgba(127,143,163,.25)'; ctx.fillRect(W / 2 - bw / 2, by + 8, bw, 3);
+        ctx.fillStyle = ramp(PALETTE.vir, rr); ctx.fillRect(W / 2 - bw / 2, by + 8, bw * rr, 3);
+        // progress bar under the active mode
+        ctx.textAlign = 'left';
+        const mx = holdout ? R0 : L0, mw = ctx.measureText(holdout ? 'spatial holdout' : 'random split').width;
+        ctx.fillStyle = PALETTE.vir[4]; ctx.fillRect(mx, by + 6, mw * ease((t % MODE_S) / MODE_S), 2);
+      },
+    });
+  }
+</script>
+
+<style>
+  .outage { margin: 0; height: 100%; display: flex; flex-direction: column; }
+  figcaption { font: 10.5px var(--mono); color: #7f8fa3; padding-top: 8px; }
+  canvas { display: block; width: 100%; flex: 1; min-height: 300px; }
+</style>

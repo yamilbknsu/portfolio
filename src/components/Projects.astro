@@ -20,24 +20,25 @@ const orgVar: Record<Org, string> = {
   UdeC: 'var(--org-udec)',
   Personal: 'var(--org-personal)',
 };
-const orgs = [...new Set(projects.map((p) => p.org))];
+const rest = projects.filter((p) => !p.highlight);
+const orgs = [...new Set(rest.map((p) => p.org))];
 ---
 
 <section class="block" id="projects">
   <div class="wrap">
-    <SectionHead num="02" kicker="projects" title="Projects">{projects.length} projects · {orgs.length} institutions</SectionHead>
+    <SectionHead num="03" kicker="projects" title="More projects">{rest.length} projects · {orgs.length} institutions</SectionHead>
 
     <div class="chips" role="group" aria-label="Filter projects by institution">
-      <button class="chip" aria-pressed="true" data-org="all">All<span class="n">{projects.length}</span></button>
+      <button class="chip" aria-pressed="true" data-org="all">All<span class="n">{rest.length}</span></button>
       {orgs.map((o) => (
         <button class="chip" aria-pressed="false" data-org={o}>
-          <span class="hx" style={`--c:${orgVar[o]};width:9px;height:10px;margin-right:6px`}></span>{o}<span class="n">{projects.filter((p) => p.org === o).length}</span>
+          <span class="hx" style={`--c:${orgVar[o]};width:9px;height:10px;margin-right:6px`}></span>{o}<span class="n">{rest.filter((p) => p.org === o).length}</span>
         </button>
       ))}
     </div>
 
     <div class="grid">
-      {projects.map((p) => (
+      {rest.map((p) => (
         <article class:list={['card', 'project', { featured: p.featured }]} data-org={p.org} id={`p-${p.id}`}>
           <div class="meta">
             <span class="hx" style={`--c:${orgVar[p.org]}`}></span>

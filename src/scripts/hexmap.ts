@@ -51,7 +51,9 @@ export function initHexMap(hero: HTMLElement, canvas: HTMLCanvasElement, tip: HT
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const narrow = W < 820;
     // full-width map; Toronto sits in the gap between text and photo; north edge at the top
-    const ax = narrow ? 0.55 : 0.6;
+    // keep Toronto in the gap just left of the photo, wherever the photo ends up
+    const photo = hero.querySelector('.photo')?.getBoundingClientRect(), box = hero.getBoundingClientRect();
+    const ax = narrow || !photo ? 0.55 : Math.max(0.5, (photo.left - box.left - 90) / W);
     proj = geoEqualEarth().rotate([-(TORONTO[0] - (ax - 0.5) * 360), 0]).fitWidth(Math.max(W, 900) * 1.02, SPHERE);
     const t0 = proj(TORONTO)!, tr = proj.translate(), top = geoPath(proj).bounds(SPHERE)[0][1];
     proj.translate([tr[0] + W * ax - t0[0], tr[1] - top - 6]);

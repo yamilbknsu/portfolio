@@ -28,7 +28,9 @@ export interface Project {
   description: string;
   links: Link[];
   featured?: boolean;
-  /** Reserved for the interactive widgets we design later. */
+  /** Shown in the Highlights section with this animated widget. */
+  highlight?: 'canoe-graph' | 'access-network' | 'outage-model';
+  /** Reserved for widgets on the remaining projects. */
   widget?: string;
 }
 
